@@ -1,10 +1,26 @@
 humhub.module('effects.sakurafall', function(module, require, $) {
     var event = require('event');
-    var blossomCount = 50;
+    var baseBlossomCount = 50;
     var blossoms = [];
     var resizeTimeout;
     var initialized = false;
     var style;
+
+    function prefersReducedMotion() {
+        return window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    }
+
+    function getBlossomCount() {
+        var width = window.innerWidth || $(window).width();
+        if (width < 576) {
+            return 18;
+        }
+        if (width < 992) {
+            return 30;
+        }
+
+        return baseBlossomCount;
+    }
 
     function createBlossom() {
         var blossom = $(`<div class="blossom">
@@ -19,14 +35,10 @@ humhub.module('effects.sakurafall', function(module, require, $) {
     }
 
     function updateBlossomPositions() {
-        var windowWidth = $(window).width();
+        var windowWidth = window.innerWidth || $(window).width();
 
         blossoms.forEach(function(blossom) {
-            var currentLeft = parseFloat(blossom.css('left'));
-            var newLeft = Math.random() * windowWidth;
-            if (Math.abs(currentLeft - newLeft) > 10) {
-                blossom.css('left', newLeft + 'px');
-            }
+            blossom.css('left', (Math.random() * windowWidth) + 'px');
         });
     }
 
@@ -40,6 +52,7 @@ humhub.module('effects.sakurafall', function(module, require, $) {
             blossom.remove();
         });
         blossoms = [];
+        clearTimeout(resizeTimeout);
         $(window).off('resize.sakuraFall');
     }
 
@@ -57,6 +70,7 @@ humhub.module('effects.sakurafall', function(module, require, $) {
                     animation: sakuraFall linear infinite;
                     font-size: 1.5em; /* Slightly larger for a natural look */
                     text-shadow: rgba(0, 0, 0, 0.15) 1px 1px 2px;
+                    will-change: transform;
                 }
                 @keyframes sakuraFall {
                     0% {
@@ -72,18 +86,25 @@ humhub.module('effects.sakurafall', function(module, require, $) {
     }
 
     function startSakuraFall() {
+        if (prefersReducedMotion()) {
+            cleanup();
+            return;
+        }
+
         cleanup();
-        
         addStyles();
 
+        var windowWidth = window.innerWidth || $(window).width();
+        var blossomCount = getBlossomCount();
         for (var i = 0; i < blossomCount; i++) {
             var blossom = createBlossom();
             if (blossom) {
                 var randomTop = Math.random() * -100;
                 blossom.css({
-                    left: Math.random() * $(window).width() + 'px',
+                    left: (Math.random() * windowWidth) + 'px',
                     top: randomTop + 'px',
-                    animationDuration: (Math.random() * 3 + 2) + 's'
+                    animationDuration: (Math.random() * 3 + 2) + 's',
+                    animationDelay: '-' + (Math.random() * 5) + 's'
                 });
 
                 blossoms.push(blossom);
@@ -99,6 +120,7 @@ humhub.module('effects.sakurafall', function(module, require, $) {
     function init() {
         if (!initialized) {
             startSakuraFall();
+            initialized = true;
         }
     }
 

@@ -1,10 +1,26 @@
 humhub.module('effects.snowfall', function(module, require, $) {
     var event = require('event');
-    var snowflakeCount = 50;
+    var baseSnowflakeCount = 50;
     var snowflakes = [];
     var resizeTimeout;
     var initialized = false;
     var style;
+
+    function prefersReducedMotion() {
+        return window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    }
+
+    function getSnowflakeCount() {
+        var width = window.innerWidth || $(window).width();
+        if (width < 576) {
+            return 18;
+        }
+        if (width < 992) {
+            return 30;
+        }
+
+        return baseSnowflakeCount;
+    }
 
     function createSnowflake() {
         var snowflake = $('<div class="snowflake">❄</div>');
@@ -12,14 +28,9 @@ humhub.module('effects.snowfall', function(module, require, $) {
     }
 
     function updateSnowflakePositions() {
-        var windowWidth = $(window).width();
+        var windowWidth = window.innerWidth || $(window).width();
         snowflakes.forEach(function(snowflake) {
-
-            var currentLeft = parseFloat(snowflake.css('left'));
-            var newLeft = Math.random() * windowWidth;
-            if (Math.abs(currentLeft - newLeft) > 10) {
-                snowflake.css('left', newLeft + 'px');
-            }
+            snowflake.css('left', (Math.random() * windowWidth) + 'px');
         });
     }
 
@@ -33,6 +44,7 @@ humhub.module('effects.snowfall', function(module, require, $) {
             snowflake.remove();
         });
         snowflakes = [];
+        clearTimeout(resizeTimeout);
         $(window).off('resize.snowfall');
     }
 
@@ -49,6 +61,7 @@ humhub.module('effects.snowfall', function(module, require, $) {
                     z-index: 9999;
                     animation: snowfall linear infinite;
                     text-shadow: rgba(0, 0, 0, 0.3) 1px 1px 2px;
+                    will-change: transform;
                 }
                 @keyframes snowfall {
                     0% {
@@ -64,18 +77,25 @@ humhub.module('effects.snowfall', function(module, require, $) {
     }
 
     function startSnowfall() {
+        if (prefersReducedMotion()) {
+            cleanup();
+            return;
+        }
+
         cleanup();
-        
         addStyles();
 
+        var windowWidth = window.innerWidth || $(window).width();
+        var snowflakeCount = getSnowflakeCount();
         for (var i = 0; i < snowflakeCount; i++) {
             var snowflake = createSnowflake();
             if (snowflake) {
                 var randomTop = Math.random() * -100;
                 snowflake.css({
-                    left: Math.random() * $(window).width() + 'px',
+                    left: (Math.random() * windowWidth) + 'px',
                     top: randomTop + 'px',
-                    animationDuration: (Math.random() * 3 + 2) + 's'
+                    animationDuration: (Math.random() * 3 + 2) + 's',
+                    animationDelay: '-' + (Math.random() * 5) + 's'
                 });
 
                 snowflakes.push(snowflake);
@@ -92,6 +112,7 @@ humhub.module('effects.snowfall', function(module, require, $) {
     function init() {
         if (!initialized) {
             startSnowfall();
+            initialized = true;
         }
     }
 

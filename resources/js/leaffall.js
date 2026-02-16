@@ -1,10 +1,26 @@
 humhub.module('effects.leaffall', function(module, require, $) {
     var event = require('event');
-    var leafCount = 50;
+    var baseLeafCount = 50;
     var leaves = [];
     var resizeTimeout;
     var initialized = false;
     var style;
+
+    function prefersReducedMotion() {
+        return window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    }
+
+    function getLeafCount() {
+        var width = window.innerWidth || $(window).width();
+        if (width < 576) {
+            return 16;
+        }
+        if (width < 992) {
+            return 28;
+        }
+
+        return baseLeafCount;
+    }
 
     function createLeaf() {
         var leaf = $(`<div class="leaf">
@@ -40,13 +56,9 @@ humhub.module('effects.leaffall', function(module, require, $) {
     }
 
     function updateLeafPositions() {
-        var windowWidth = $(window).width();
+        var windowWidth = window.innerWidth || $(window).width();
         leaves.forEach(function(leaf) {
-            var currentLeft = parseFloat(leaf.css('left'));
-            var newLeft = Math.random() * windowWidth;
-            if (Math.abs(currentLeft - newLeft) > 10) {
-                leaf.css('left', newLeft + 'px');
-            }
+            leaf.css('left', (Math.random() * windowWidth) + 'px');
         });
     }
 
@@ -60,6 +72,7 @@ humhub.module('effects.leaffall', function(module, require, $) {
             leaf.remove();
         });
         leaves = [];
+        clearTimeout(resizeTimeout);
         $(window).off('resize.leafFall');
     }
 
@@ -74,6 +87,7 @@ humhub.module('effects.leaffall', function(module, require, $) {
                     user-select: none;
                     z-index: 9999;
                     animation: leafFall linear infinite;
+                    will-change: transform;
                 }
                 .leaf-body {
                     fill: currentColor;
@@ -105,9 +119,16 @@ humhub.module('effects.leaffall', function(module, require, $) {
     }
 
     function startLeafFall() {
+        if (prefersReducedMotion()) {
+            cleanup();
+            return;
+        }
+
         cleanup();
         
         addStyles();
+        var windowWidth = window.innerWidth || $(window).width();
+        var leafCount = getLeafCount();
         for (var i = 0; i < leafCount; i++) {
             var leaf = createLeaf();
             if (leaf) {
@@ -124,10 +145,11 @@ humhub.module('effects.leaffall', function(module, require, $) {
                 ];
                 var randomColor = colors[Math.floor(Math.random() * colors.length)];
                 leaf.css({
-                    left: Math.random() * $(window).width() + 'px',
+                    left: (Math.random() * windowWidth) + 'px',
                     top: randomTop + 'px',
                     color: randomColor,
                     animationDuration: (Math.random() * 5 + 3) + 's',
+                    animationDelay: '-' + (Math.random() * 8) + 's',
                     transform: `scale(${Math.random() * 0.4 + 0.3})`,
                     filter: 'drop-shadow(2px 2px 2px rgba(0, 0, 0, 0.15))'
                 });
@@ -142,6 +164,7 @@ humhub.module('effects.leaffall', function(module, require, $) {
     function init() {
         if (!initialized) {
             startLeafFall();
+            initialized = true;
         }
     }
 

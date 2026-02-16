@@ -7,7 +7,7 @@ use Yii;
 class Events
 {
     /**
-     * Adds a snowfall widget to the layout addons section
+     * Adds the effects widget to layout addons.
      */
     public static function onLayoutAddonsInit($event)
     {

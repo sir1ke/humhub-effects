@@ -26,6 +26,9 @@ class Configuration extends Model
         return [
             [['effectsEnabled'], 'boolean'],
             [['selectedEffect'], 'string'],
+            [['selectedEffect'], 'required', 'when' => function ($model) {
+                return (bool)$model->effectsEnabled;
+            }],
             [['selectedEffect'], 'in', 'range' => [
                 'enableSakuraFall',
                 'enableSnowfall',

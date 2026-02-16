@@ -1,10 +1,26 @@
 humhub.module('effects.rainfall', function(module, require, $) {
     var event = require('event');
-    var rainDropCount = 100;
+    var baseRainDropCount = 100;
     var rainDrops = [];
     var resizeTimeout;
     var initialized = false;
     var style;
+
+    function prefersReducedMotion() {
+        return window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    }
+
+    function getRainDropCount() {
+        var width = window.innerWidth || $(window).width();
+        if (width < 576) {
+            return 36;
+        }
+        if (width < 992) {
+            return 70;
+        }
+
+        return baseRainDropCount;
+    }
 
     function createRainDrop() {
         var raindrop = $('<div class="raindrop">|</div>');
@@ -12,13 +28,9 @@ humhub.module('effects.rainfall', function(module, require, $) {
     }
 
     function updateRainDropPositions() {
-        var windowWidth = $(window).width();
+        var windowWidth = window.innerWidth || $(window).width();
         rainDrops.forEach(function(raindrop) {
-            var currentLeft = parseFloat(raindrop.css('left'));
-            var newLeft = Math.random() * windowWidth;
-            if (Math.abs(currentLeft - newLeft) > 10) {
-                raindrop.css('left', newLeft + 'px');
-            }
+            raindrop.css('left', (Math.random() * windowWidth) + 'px');
         });
     }
 
@@ -32,6 +44,7 @@ humhub.module('effects.rainfall', function(module, require, $) {
             raindrop.remove();
         });
         rainDrops = [];
+        clearTimeout(resizeTimeout);
         $(window).off('resize.rainfall');
     }
 
@@ -51,6 +64,7 @@ humhub.module('effects.rainfall', function(module, require, $) {
                     font-size: 14px;
                     font-weight: 100;
                     transform: scaleY(2);
+                    will-change: transform, opacity;
                 }
                 @keyframes rainfall {
                     0% {
@@ -74,17 +88,25 @@ humhub.module('effects.rainfall', function(module, require, $) {
     }
 
     function startRainfall() {
+        if (prefersReducedMotion()) {
+            cleanup();
+            return;
+        }
+
         cleanup();
         
         addStyles();
+        var windowWidth = window.innerWidth || $(window).width();
+        var rainDropCount = getRainDropCount();
         for (var i = 0; i < rainDropCount; i++) {
             var raindrop = createRainDrop();
             if (raindrop) {
                 var randomTop = Math.random() * -100;
                 raindrop.css({
-                    left: Math.random() * $(window).width() + 'px',
+                    left: (Math.random() * windowWidth) + 'px',
                     top: randomTop + 'px',
-                    animationDuration: (Math.random() * 0.5 + 0.5) + 's'
+                    animationDuration: (Math.random() * 0.5 + 0.5) + 's',
+                    animationDelay: '-' + (Math.random() * 2) + 's'
                 });
                 rainDrops.push(raindrop);
             }
@@ -97,6 +119,7 @@ humhub.module('effects.rainfall', function(module, require, $) {
     function init() {
         if (!initialized) {
             startRainfall();
+            initialized = true;
         }
     }
 
