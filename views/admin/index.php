@@ -10,12 +10,7 @@ $this->title = Yii::t('EffectsModule.base', 'Effects Settings');
 $this->params['breadcrumbs'][] = $this->title;
 
 // Define available effects
-$effectOptions = [
-    'enableSakuraFall' => Yii::t('EffectsModule.base', 'Sakura Fall'),
-    'enableSnowfall' => Yii::t('EffectsModule.base', 'Snowfall'),
-    'enableLeaffall' => Yii::t('EffectsModule.base', 'Leaf Fall'),
-    'enableRainfall' => Yii::t('EffectsModule.base', 'Rainfall'),
-];
+$effectOptions = $model->getEffectOptions();
 
 $effectsEnabledInputId = Html::getInputId($model, 'effectsEnabled');
 $selectedEffectInputId = Html::getInputId($model, 'selectedEffect');
@@ -32,13 +27,19 @@ $selectedEffectInputId = Html::getInputId($model, 'selectedEffect');
             </div>
         <?php endif; ?>
 
+        <?php if (empty($effectOptions)): ?>
+            <div class="alert alert-warning">
+                <?= Yii::t('EffectsModule.base', 'No effect scripts were found in resources/js.') ?>
+            </div>
+        <?php endif; ?>
+
         <?php $form = ActiveForm::begin(); ?>
 
         <?= $form->field($model, 'effectsEnabled')->checkbox() ?>
 
         <?= $form->field($model, 'selectedEffect')->dropDownList($effectOptions, [
             'prompt' => Yii::t('EffectsModule.base', '- Select Effect -'),
-            'disabled' => !$model->effectsEnabled,
+            'disabled' => !$model->effectsEnabled || empty($effectOptions),
         ]) ?>
 
         <div class="mb-3">
@@ -62,8 +63,9 @@ $this->registerJs(<<<JS
     }
 
     function syncSelectState() {
-        select.disabled = !checkbox.checked;
-        select.required = checkbox.checked;
+        var hasSelectableEffects = select.options.length > 1;
+        select.disabled = !checkbox.checked || !hasSelectableEffects;
+        select.required = checkbox.checked && hasSelectableEffects;
     }
 
     checkbox.addEventListener('change', syncSelectState);

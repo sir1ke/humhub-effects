@@ -28,20 +28,14 @@ class Effects extends Widget
             return '';
         }
 
-        $effectScripts = [
-            'enableSnowfall' => 'snowfall.js',
-            'enableSakuraFall' => 'sakurafall.js',
-            'enableLeaffall' => 'leaffall.js',
-            'enableRainfall' => 'rainfall.js',
-        ];
-
-        $selectedScript = $effectScripts[$configuration->selectedEffect] ?? null;
-        if ($selectedScript === null) {
+        $availableEffects = $module->getAvailableEffects();
+        $selectedEffect = $availableEffects[$configuration->selectedEffect] ?? null;
+        if ($selectedEffect === null) {
             return '';
         }
 
         $assetBundle = Assets::register($view);
-        $view->registerJsFile($assetBundle->baseUrl . '/js/' . $selectedScript, [
+        $view->registerJsFile($assetBundle->baseUrl . '/js/' . $selectedEffect['file'], [
             'depends' => [Assets::class],
         ]);
 

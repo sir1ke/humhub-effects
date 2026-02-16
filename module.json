@@ -1,12 +1,12 @@
 {
     "id": "effects",
-    "version": "1.0.0",
+    "version": "1.1.0",
     "name": "Effects",
     "description": "Add dynamic visual effects to your HumHub instance.",
     "humhub": {
         "minVersion": "1.18"
     },
-    "keywords": ["sakurafall", "snowfall", "module"],
+    "keywords": ["effects", "sakurafall", "snowfall", "rainfall", "leaffall", "pumpkinfall", "fireworks", "confetti", "hearts", "module"],
     "screenshots": ["resources/Screenshot_1.gif"],
     "homepage": "https://greenmeteor.net",
     "issues": "https://github.com/GreenMeteor/effects/issues",

@@ -8,15 +8,26 @@ use humhub\components\SettingsManager;
 
 class Configuration extends Model
 {
+    private const LEGACY_EFFECT_MAP = [
+        'enableSakuraFall' => 'sakurafall',
+        'enableSnowfall' => 'snowfall',
+        'enableLeaffall' => 'leaffall',
+        'enableRainfall' => 'rainfall',
+        'enablePumpkinFall' => 'pumpkinfall',
+        'enableFireworks' => 'fireworks',
+        'enableConfetti' => 'confetti',
+        'enableHearts' => 'hearts',
+    ];
+
     public ?SettingsManager $settingsManager;
-    
+
+    /**
+     * @var array<string, array{file: string, label: string}>
+     */
+    public array $availableEffects = [];
+
     public bool $effectsEnabled = false;
     public string $selectedEffect = '';
-    
-    public bool $enableSakuraFall = false;
-    public bool $enableSnowfall = false;
-    public bool $enableLeaffall = false;
-    public bool $enableRainfall = false;
 
     /**
      * @inheritdoc
@@ -27,15 +38,14 @@ class Configuration extends Model
             [['effectsEnabled'], 'boolean'],
             [['selectedEffect'], 'string'],
             [['selectedEffect'], 'required', 'when' => function ($model) {
-                return (bool)$model->effectsEnabled;
+                return (bool)$model->effectsEnabled && !empty($model->availableEffects);
             }],
-            [['selectedEffect'], 'in', 'range' => [
-                'enableSakuraFall',
-                'enableSnowfall',
-                'enableLeaffall',
-                'enableRainfall',
-            ]],
-            [['enableSakuraFall', 'enableSnowfall', 'enableLeaffall', 'enableRainfall'], 'boolean'],
+            [['selectedEffect'], 'in', 'range' => array_keys($this->availableEffects)],
+            [['selectedEffect'], function ($attribute) {
+                if ($this->effectsEnabled && empty($this->availableEffects)) {
+                    $this->addError($attribute, Yii::t('EffectsModule.base', 'No effect scripts found in resources/js.'));
+                }
+            }],
         ];
     }
 
@@ -47,11 +57,22 @@ class Configuration extends Model
         return [
             'effectsEnabled' => Yii::t('EffectsModule.base', 'Enable Effects'),
             'selectedEffect' => Yii::t('EffectsModule.base', 'Select Effect'),
-            'enableSakuraFall' => Yii::t('EffectsModule.base', 'Sakura Fall Effect'),
-            'enableSnowfall' => Yii::t('EffectsModule.base', 'Snowfall Effect'),
-            'enableLeaffall' => Yii::t('EffectsModule.base', 'Leaf Fall Effect'),
-            'enableRainfall' => Yii::t('EffectsModule.base', 'Rain Fall Effect'),
         ];
+    }
+
+    /**
+     * Returns options for admin dropdown.
+     *
+     * @return array<string, string>
+     */
+    public function getEffectOptions(): array
+    {
+        $options = [];
+        foreach ($this->availableEffects as $effectKey => $effectData) {
+            $options[$effectKey] = Yii::t('EffectsModule.base', $effectData['label']);
+        }
+
+        return $options;
     }
 
     /**
@@ -59,24 +80,31 @@ class Configuration extends Model
      */
     public function loadBySettings(): void
     {
-        $this->enableSakuraFall = (bool)$this->settingsManager->get('enableSakuraFall');
-        $this->enableSnowfall = (bool)$this->settingsManager->get('enableSnowfall');
-        $this->enableLeaffall = (bool)$this->settingsManager->get('enableLeaffall');
-        $this->enableRainfall = (bool)$this->settingsManager->get('enableRainfall');
+        $storedEnabled = $this->settingsManager->get('effectsEnabled');
+        $storedSelected = (string)($this->settingsManager->get('selectedEffect') ?? '');
 
-        $this->effectsEnabled = $this->enableSakuraFall || 
-            $this->enableSnowfall || 
-            $this->enableLeaffall || 
-            $this->enableRainfall;
+        $this->effectsEnabled = $storedEnabled !== null ? (bool)$storedEnabled : false;
+        $this->selectedEffect = $this->normalizeStoredEffectKey($storedSelected);
 
-        if ($this->enableSakuraFall) {
-            $this->selectedEffect = 'enableSakuraFall';
-        } elseif ($this->enableSnowfall) {
-            $this->selectedEffect = 'enableSnowfall';
-        } elseif ($this->enableLeaffall) {
-            $this->selectedEffect = 'enableLeaffall';
-        } elseif ($this->enableRainfall) {
-            $this->selectedEffect = 'enableRainfall';
+        if ($this->selectedEffect === '') {
+            $this->selectedEffect = $this->detectLegacySelectedEffect();
+        }
+
+        if ($storedEnabled === null) {
+            $this->effectsEnabled = $this->selectedEffect !== '';
+        }
+
+        if ($this->effectsEnabled && $this->selectedEffect === '') {
+            $fallbackEffect = array_key_first($this->availableEffects);
+            if ($fallbackEffect === null) {
+                $this->effectsEnabled = false;
+            } else {
+                $this->selectedEffect = $fallbackEffect;
+            }
+        }
+
+        if (!$this->effectsEnabled) {
+            $this->selectedEffect = '';
         }
     }
 
@@ -89,20 +117,50 @@ class Configuration extends Model
             return false;
         }
 
-        $this->enableSakuraFall = false;
-        $this->enableSnowfall = false;
-        $this->enableLeaffall = false;
-        $this->enableRainfall = false;
-
-        if ($this->effectsEnabled && !empty($this->selectedEffect)) {
-            $this->{$this->selectedEffect} = true;
+        $selectedEffect = $this->effectsEnabled ? $this->normalizeStoredEffectKey($this->selectedEffect) : '';
+        if ($this->effectsEnabled && $selectedEffect === '' && !empty($this->availableEffects)) {
+            $this->addError('selectedEffect', Yii::t('EffectsModule.base', 'Please select an effect.'));
+            return false;
         }
 
-        $this->settingsManager->set('enableSakuraFall', $this->enableSakuraFall);
-        $this->settingsManager->set('enableSnowfall', $this->enableSnowfall);
-        $this->settingsManager->set('enableLeaffall', $this->enableLeaffall);
-        $this->settingsManager->set('enableRainfall', $this->enableRainfall);
+        $this->settingsManager->set('effectsEnabled', $this->effectsEnabled);
+        $this->settingsManager->set('selectedEffect', $selectedEffect);
+
+        foreach (array_keys(self::LEGACY_EFFECT_MAP) as $legacySettingKey) {
+            $this->settingsManager->set($legacySettingKey, false);
+        }
 
         return true;
+    }
+
+    private function normalizeStoredEffectKey(string $storedValue): string
+    {
+        $storedValue = trim($storedValue);
+        if ($storedValue === '') {
+            return '';
+        }
+
+        if (isset($this->availableEffects[$storedValue])) {
+            return $storedValue;
+        }
+
+        if (isset(self::LEGACY_EFFECT_MAP[$storedValue])) {
+            $legacyMapped = self::LEGACY_EFFECT_MAP[$storedValue];
+            return isset($this->availableEffects[$legacyMapped]) ? $legacyMapped : '';
+        }
+
+        $lowerValue = strtolower($storedValue);
+        return isset($this->availableEffects[$lowerValue]) ? $lowerValue : '';
+    }
+
+    private function detectLegacySelectedEffect(): string
+    {
+        foreach (self::LEGACY_EFFECT_MAP as $legacySettingKey => $effectKey) {
+            if ((bool)$this->settingsManager->get($legacySettingKey) && isset($this->availableEffects[$effectKey])) {
+                return $effectKey;
+            }
+        }
+
+        return '';
     }
 }
