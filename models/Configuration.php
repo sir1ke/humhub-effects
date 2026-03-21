@@ -4,6 +4,7 @@ namespace gm\humhub\modules\effects\models;
 
 use Yii;
 use yii\base\Model;
+use yii\base\InvalidConfigException;
 use humhub\components\SettingsManager;
 
 class Configuration extends Model
@@ -19,7 +20,7 @@ class Configuration extends Model
         'enableHearts' => 'hearts',
     ];
 
-    public ?SettingsManager $settingsManager;
+    public ?SettingsManager $settingsManager = null;
 
     /**
      * @var array<string, array{file: string, label: string}>
@@ -28,6 +29,15 @@ class Configuration extends Model
 
     public bool $effectsEnabled = false;
     public string $selectedEffect = '';
+
+    public function init()
+    {
+        parent::init();
+
+        if (!$this->settingsManager instanceof SettingsManager) {
+            throw new InvalidConfigException('Configuration requires a valid settingsManager instance.');
+        }
+    }
 
     /**
      * @inheritdoc

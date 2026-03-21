@@ -121,15 +121,7 @@ humhub.module('effects.snowfall', function(module, require, $) {
         init: init
     });
 
-    $(document).ready(function() {
-        init();
-    });
+    init();
 
-    event.on('humhub:ready', function() {
-        init();
-    });
-    
-    event.on('humhub:modules:content:afterInsert', init);
-    event.on('humhub:content:afterMove', init);
-    event.on('humhub:content:afterDelete', init);
+    event.on('humhub:ready', init);
 });

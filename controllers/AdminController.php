@@ -10,7 +10,7 @@ use humhub\modules\admin\components\Controller;
  */
 class AdminController extends Controller
 {
-    public function actionIndex()
+    public function actionIndex(): string
     {
         $model = $this->module->getConfiguration();
 

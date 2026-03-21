@@ -9,7 +9,6 @@ use yii\helpers\Html;
 $this->title = Yii::t('EffectsModule.base', 'Effects Settings');
 $this->params['breadcrumbs'][] = $this->title;
 
-// Define available effects
 $effectOptions = $model->getEffectOptions();
 
 $effectsEnabledInputId = Html::getInputId($model, 'effectsEnabled');
@@ -17,18 +16,18 @@ $selectedEffectInputId = Html::getInputId($model, 'selectedEffect');
 ?>
 
 <div class="card">
-    <div class="card-header">
+    <div class="card-header fw-semibold">
         <?= Html::encode($this->title) ?>
     </div>
     <div class="card-body">
         <?php if (Yii::$app->session->hasFlash('success')): ?>
-            <div class="alert alert-success">
+            <div class="alert alert-success mb-3" role="alert">
                 <?= Yii::$app->session->getFlash('success') ?>
             </div>
         <?php endif; ?>
 
         <?php if (empty($effectOptions)): ?>
-            <div class="alert alert-warning">
+            <div class="alert alert-warning mb-3" role="alert">
                 <?= Yii::t('EffectsModule.base', 'No effect scripts were found in resources/js.') ?>
             </div>
         <?php endif; ?>
@@ -38,7 +37,7 @@ $selectedEffectInputId = Html::getInputId($model, 'selectedEffect');
         <?= $form->field($model, 'effectsEnabled')->checkbox() ?>
 
         <?= $form->field($model, 'selectedEffect')->dropDownList($effectOptions, [
-            'prompt' => Yii::t('EffectsModule.base', '- Select Effect -'),
+            'prompt' => Yii::t('EffectsModule.base', 'Select an effect'),
             'disabled' => !$model->effectsEnabled || empty($effectOptions),
         ]) ?>
 
